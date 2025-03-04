@@ -276,18 +276,27 @@ def main():
             print("Please use --ref2share_result args input ref2share script result")
             sys.exit(-1)
 
-    log.info("SYSTEM - Start front-end analysis: {}".format(str(datetime.datetime.now())))
+    start_time_front_end_analysis = datetime.datetime.now()
+    log.info("SYSTEM - Start front-end analysis: {}".format(str(start_time_front_end_analysis)))
     bin_list = front_analysise(args)
-    log.info("SYSTEM - End front-end analysis: {}".format(str(datetime.datetime.now())))
+    end_time_front_end_analysis = datetime.datetime.now()
+    log.info("SYSTEM - End front-end analysis: {}".format(str(end_time_front_end_analysis)))
+    log.info("SYSTEM - Front-end analysis total time (s): {}s".format((end_time_front_end_analysis - start_time_front_end_analysis).seconds))
 
     if args.ghidra_script:
         if ("share2sink" in args.ghidra_script and args.ref2share_result) or ("share2sink" not in args.ghidra_script):
+            start_time_ghidra_analysis = datetime.datetime.now()
+            log.info("SYSTEM - Start ghidra analysis: {}".format(str(start_time_ghidra_analysis)))
             ghidra_analysise(args, bin_list)
+            end_time_ghidra_analysis = datetime.datetime.now()
+            log.info("SYSTEM - End ghidra analysis: {}".format(str(end_time_ghidra_analysis)))
+            log.info("SYSTEM - Ghidra analysis total time (s): {}s".format((end_time_ghidra_analysis - start_time_ghidra_analysis).seconds))
         elif "share2sink" in args.ghidra_script and not args.ref2share_result:
             print("Please use --ref2share_result args input ref2share script result")
             sys.exit(-1)
     if args.ghidra_script and args.taint_check:
-        log.info("SYSTEM - Start taint analysis: {}".format(str(datetime.datetime.now())))
+        start_time_taint_analysis = datetime.datetime.now()
+        log.info("SYSTEM - Start taint analysis: {}".format(str(start_time_taint_analysis)))
         # 启用污点分析
         from taint_check.main import taint_stain_analysis
         from taint_check.bug_finder.config import checkcommandinjection, checkbufferoverflow
@@ -307,7 +316,9 @@ def main():
 
                     # TODO 更改结果文件的保存位置
                     taint_stain_analysis(bin_path, ghidra_result, args.output)
-        log.info("SYSTEM - End taint analysis: {}".format(str(datetime.datetime.now())))
+        end_time_taint_analysis = datetime.datetime.now()
+        log.info("SYSTEM - End taint analysis: {}".format(str(end_time_taint_analysis)))
+        log.info("SYSTEM - Taint analysis total time (s): {}s".format((end_time_taint_analysis - start_time_taint_analysis).seconds))
 
     end_time = datetime.datetime.now()
     log.info("SYSTEM - End analysis: {}".format(str(end_time)))
