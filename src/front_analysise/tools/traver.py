@@ -5,6 +5,8 @@
 # @File    : traver.py
 import os
 import stat
+import mimetypes
+import subprocess
 from copy import copy
 
 from front_analysise.untils.logger.logger import get_logger
@@ -27,6 +29,7 @@ class TraverFile(object):
         self._htmlfile = []
         self._xmlfile = []
         self._jsfile = []
+        self._php_files = []
         self._elffile = []
 
         self._elffiles_remove_so = []
@@ -45,6 +48,16 @@ class TraverFile(object):
                     continue
                 if os.path.islink(filepath):
                     continue
+
+                # Try to guess mime type.
+                mime_type, _ = mimetypes.guess_type(filepath)
+                if not mime_type:
+                    process = subprocess.Popen(
+                        ["file", "--mime-type", "-b", filepath], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                    )
+                    mime_type, _ = process.communicate()
+                    mime_type = mime_type.split(";")[0].strip()
+
                 if suffix_name.lower() == "htm" or suffix_name.lower() == "html" or suffix_name.lower() == "shtml":
                     self._htmlfile.append(filepath)
                     self.log.debug("[*] Find HTML file : {}".format(filepath))
@@ -55,6 +68,14 @@ class TraverFile(object):
                 elif suffix_name.lower() == "xml":
                     self._xmlfile.append(filepath)
                     self.log.debug("[*] Find XML file : {}".format(filepath))
+                # Add PHP files via suffix.
+                elif suffix_name.lower() == "php":
+                    self._php_files.append(filepath)
+                    self.log.debug("[*] Found PHP file {}".format(filepath))
+                # Add PHP files via mime type.
+                elif mime_type in ["application/x-httpd-php", "text/x-php", "application/x-php"]:
+                    self._php_files.append(filepath)
+                    self.log.debug("[*] Find PHP file (via MIME type: {}): {}".format(mime_type, filepath))
                 # 在此添加其他文件的处理
                 elif TraverFile.is_ELFfile(filepath):
                     self._elffile.append(filepath)
@@ -91,6 +112,9 @@ class TraverFile(object):
     def get_jsfile(self):
         return self._jsfile
 
+    def get_php_files(self):
+        return self._php_files
+
     def get_elffile(self, filter=True):
         if filter:
             self._filter_some_command()
@@ -123,6 +147,8 @@ class TraverFile(object):
             return self.get_xmlfile()
         elif suffix == "html":
             return self.get_htmlfile()
+        elif suffix == "php":
+            return self.get_php_files()
         else:
             result = set()
             for file in self.allfile:

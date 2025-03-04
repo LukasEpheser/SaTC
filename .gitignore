@@ -2,5 +2,10 @@
 
 *.pyc
 ghidra
+data
+.DS_Store
+run_logs
+output
+nohup.out
 
 satc_TaintCheck_simple

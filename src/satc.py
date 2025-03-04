@@ -251,8 +251,16 @@ def ghidra_analysise(args, border_bin):
             else:
                 ghidra_args += ['-import', "'" + binpath + "'"]
 
+            print("DEBUG - ghidra_args: {}".format(ghidra_args))
+            # try:
             p = subprocess.Popen(ghidra_args)
             p.wait()
+            # p.wait(timeout=2 * 60 * 60)
+            # except subprocess.TimeoutExpired:
+            #    print("Timeout: Ghidra script took linger than two hours.")
+            #    log.error("Timeout: Ghidra script took linger than two hours.")
+            #    p.kill()
+            #    p.wait()
 
     # 移除GHIdra Project目录和rep目录
     if not args.save_ghidra_project:
@@ -261,30 +269,30 @@ def ghidra_analysise(args, border_bin):
 
 def main():
     start_time = datetime.datetime.now()
-    log.info("Start analysis time : {}".format(str(start_time)))
+    log.info("SYSTEM - Start analysis: {}".format(str(start_time)))
     args = argsparse()
     if args.ghidra_script:
         if "share2sink" in args.ghidra_script and not args.ref2share_result:
             print("Please use --ref2share_result args input ref2share script result")
             sys.exit(-1)
 
+    log.info("SYSTEM - Start front-end analysis: {}".format(str(datetime.datetime.now())))
     bin_list = front_analysise(args)
+    log.info("SYSTEM - End front-end analysis: {}".format(str(datetime.datetime.now())))
+
     if args.ghidra_script:
         if ("share2sink" in args.ghidra_script and args.ref2share_result) or ("share2sink" not in args.ghidra_script):
             ghidra_analysise(args, bin_list)
         elif "share2sink" in args.ghidra_script and not args.ref2share_result:
             print("Please use --ref2share_result args input ref2share script result")
             sys.exit(-1)
-
-
     if args.ghidra_script and args.taint_check:
+        log.info("SYSTEM - Start taint analysis: {}".format(str(datetime.datetime.now())))
         # 启用污点分析
         from taint_check.main import taint_stain_analysis
         from taint_check.bug_finder.config import checkcommandinjection, checkbufferoverflow
 
         global checkcommandinjection, checkbufferoverflow
-
-        log.info("Start taint check ... ")
 
         for bin_name, bin_path in bin_list:
             for gs in args.ghidra_script:
@@ -299,11 +307,11 @@ def main():
 
                     # TODO 更改结果文件的保存位置
                     taint_stain_analysis(bin_path, ghidra_result, args.output)
+        log.info("SYSTEM - End taint analysis: {}".format(str(datetime.datetime.now())))
 
-        log.info("End taint check ...")
     end_time = datetime.datetime.now()
-
-    log.info("Total time : {}s".format((start_time-end_time).seconds))
+    log.info("SYSTEM - End analysis: {}".format(str(end_time)))
+    log.info("SYSTEM - Total time (s): {}s".format((end_time - start_time).seconds))
 
 
 if __name__ == "__main__":

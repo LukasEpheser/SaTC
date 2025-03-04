@@ -44,7 +44,7 @@ class FrontAnalysise(_BaseAnalysise):
     #  不应该出现在方法内部，这个逻辑需要重新写，整理代码
     def analysise(self, ANALYSIZER):
 
-        for suffix, parser in ANALYSIZER.items():
+        for suffix, parsers in ANALYSIZER.items():
             self.log.info(" Start Analysise {} File".format(suffix))
             files = self.traver.get_file(suffix)
             # files = ["/home/tt/vmware_share/_DIR_878_FW120B05_decode.BIN.extracted/_A0.extracted/_8957DC.extracted/cpio-root/etc_ro/lighttpd/www/web/Network.html"]
@@ -65,18 +65,19 @@ class FrontAnalysise(_BaseAnalysise):
                 files = js_file
                 # files = ["/home/tt/firmware/_ac18_kf_V15.03.05.19(6318_)_cn.bin.extracted/squashfs-root/webroot_ro/iptv.js"]
 
-            for file in files:
-                parseobj = parser(file)
-                parseobj.analysise()
-                self.analysise_obj.append(parseobj)
-                if isinstance(parseobj, HTMLParser) and JS_LIMITED_ACTIVATION:
-                    jsfile_citations = parseobj.get_jsfile_citations()
-                    for jsfile, jobg in jsfile_citations.items():
-                        j_co = self.jsfile_citations.get(jsfile, None)
-                        if j_co is None:
-                            self.jsfile_citations.update({jsfile: jobg})
-                        else:
-                            self.jsfile_citations.update({jsfile: j_co+jobg})
+            for parser in parsers:
+                for file in files:
+                    parseobj = parser(file)
+                    parseobj.analysise()
+                    self.analysise_obj.append(parseobj)
+                    if isinstance(parseobj, HTMLParser) and JS_LIMITED_ACTIVATION:
+                        jsfile_citations = parseobj.get_jsfile_citations()
+                        for jsfile, jobg in jsfile_citations.items():
+                            j_co = self.jsfile_citations.get(jsfile, None)
+                            if j_co is None:
+                                self.jsfile_citations.update({jsfile: jobg})
+                            else:
+                                self.jsfile_citations.update({jsfile: j_co + jobg})
 
 
 class BackAnalysise(_BaseAnalysise):

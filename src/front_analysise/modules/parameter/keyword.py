@@ -48,17 +48,8 @@ class Keyword(BaseParameter):
             if filter_str in name:
                 return False, ""
 
-        # if name.endswith("="):
-        #     return True, name[:-1]
-
         return True, name
 
-            # if not any(s in str for s in ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "-", "+", "{", "}", "[", "]", ":", ";", "'", "\"", ",", ".", "?", "/", ",", "<", ">", "\\", "|", "，", "？", " ", "！", '\'']):
-            #     if name.endswith("="):
-            #         return (True, name[:-1])
-            #     return (True, name)
-            #
-            # return (False, "")
 
     @classmethod
     def factory_keyword(cls, k, fpath, check):
@@ -68,11 +59,15 @@ class Keyword(BaseParameter):
                 obj_s.add_textfile(fpath)
                 return obj_s
 
-        if check:
+        if check == 1:
             check_res_b, str = BaseParameter.baseFilter(k)
             check_res_f, str = cls.filter(k)
             check_res = check_res_b and check_res_f
             # check_res, str = BaseParameter.baseFilter(k)
+        elif check == 2:
+            # Do nothing for now.
+            check_res = True
+            str = k
         else:
             check_res, str = BaseParameter.baseFilter(k)
 
