@@ -75,7 +75,7 @@ class TraverFile(object):
                 # Add PHP files via mime type.
                 elif mime_type in ["application/x-httpd-php", "text/x-php", "application/x-php"]:
                     self._php_files.append(filepath)
-                    self.log.debug("[*] Find PHP file (via MIME type: {}): {}".format(mime_type, filepath))
+                    self.log.debug("[*] Found PHP file (via MIME type {}) {}".format(mime_type, filepath))
                 # 在此添加其他文件的处理
                 elif TraverFile.is_ELFfile(filepath):
                     self._elffile.append(filepath)
