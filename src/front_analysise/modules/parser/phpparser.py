@@ -9,13 +9,13 @@ from front_analysise.modules.parser.baseparse import BaseParser
 import os
 import re
 
-
 PHP_SANITIZER = [
     "htmlspecialchars",  # XSS
+    "strlen",  # Misc., e.g., Buffer Overflows
     "mysql_real_escape_string",  # SQL-Injection
     "preg_replace",  # Misc., e.g., Path Traversal
     "str_replace",  # Misc., e.g., Path Traversal
-    "json_encode",  # Misc., e.g., JSON Traversal
+    "json_encode",  # Misc., e.g., JSON Injection
     "strip_tags",  # Code (HTML, JS, PHP) Injection
     "filter_var",  # Misc, e.g., XSS or SQL-Injection
     "filter_input",  # Misc, e.g., XSS or SQL-Injection
@@ -23,6 +23,8 @@ PHP_SANITIZER = [
     "escapeshellcmd",  # Command Line Injection
 ]
 
+# Some $_SERVER variables are not user-controllable - we filter accesses to them.
+# Source: https://stackoverflow.com/questions/6474783/which-server-variables-are-safe
 PHP_SERVER_FILTER = [
     "GATEWAY_INTERFACE",
     "SERVER_ADDR",
@@ -43,7 +45,8 @@ PHP_SERVER_FILTER = [
     "SCRIPT_NAME",
 ]
 
-
+# Parses PHP files to extract access keys of user-controllable superglobal arrays.
+# If a valid access key is found, the module passes it to subsequent data flow analysis.
 class PHPParser(BaseParser):
 
     def __init__(self, filepath):
@@ -66,7 +69,7 @@ class PHPParser(BaseParser):
         # Group 3: global array name
         # Group 4: key
         global_array_matches = re.findall(
-            r'((\$\w+)?\s*=?\s*(\b[\w]*\s*\((?:[^)]*?))?\s*\$\_(GET|POST|SERVER|COOKIE|FILES)\[["\']([\w\.]*?)["\']\])',
+            r'((\$\w+)?\s*=?\s*(\b[\w]*\s*\((?:[^)]*?))?\s*\$\_(GET|POST|SERVER|COOKIE|FILES|REQUEST)\[["\']([\w\.]*?)["\']\])',
             code,
         )
 
@@ -86,8 +89,11 @@ class PHPParser(BaseParser):
         # De-duped keywords passed to SaTC.
         keywords = set()
 
+        # Start filtering...
         for match in matches:
-            self.log.debug('PHP: Found keyword "{}"'.format(match["key"]))
+            self.log.debug(
+                'PHP: Found access to array "{}" with key "{}"'.format(match["superglobal_array"], match["key"])
+            )
 
             # Check if access to $_SERVER is user-controllable.
             if match["superglobal_array"] == "SERVER" and match["key"] in PHP_SERVER_FILTER:
@@ -97,15 +103,20 @@ class PHPParser(BaseParser):
                 match["sanitized_by"] = "accessed $_SERVER variable not controllable"
                 continue
 
-            # Check if assigned variable is passed into sanitizer functions.
-            if match["assigned_parameter"]:
-                for func in PHP_SANITIZER:
+            # Check if access or assigned variable is passed into sanitizer functions.
+            for func in PHP_SANITIZER:
+                if func in match["wrapping_function"]:
+                    self.log.debug('PHP: Filter keyword "{}": wrapped in sanitizer {}'.format(match["key"], func))
+                    match["sanitized_by"] = "access wrapped in sanitizer " + func
+                    break
+
+                if match["assigned_parameter"]:
                     pattern = r"\b" + func + r"\s*\(([^)]*?)" + re.escape(match["assigned_parameter"]) + r"([^)]*?)\)"
                     matches = re.findall(pattern, code)
 
                     if matches:
-                        self.log.debug('PHP: Filter keyword "{}": detected sanitizer {}'.format(match["key"], func))
-                        match["sanitized_by"] = "passed to sanitizer " + func
+                        self.log.debug('PHP: Filter keyword "{}": passed to sanitizer {}'.format(match["key"], func))
+                        match["sanitized_by"] = "assigned var passed to sanitizer " + func
                         break
 
             keywords.add(match["key"])

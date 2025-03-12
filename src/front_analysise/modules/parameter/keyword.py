@@ -65,7 +65,7 @@ class Keyword(BaseParameter):
             check_res = check_res_b and check_res_f
             # check_res, str = BaseParameter.baseFilter(k)
         elif check == 2:
-            # Do nothing for now.
+            # Do not apply length or blacklist filter.
             check_res = True
             str = k
         else:
